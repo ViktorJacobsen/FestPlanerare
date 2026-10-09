@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Halloweenfesten</title>
 <meta name="theme-color" content="#1E1428">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -20,7 +20,7 @@
     --pumpkin:#F28C28; --bone:#EDE6D6; --dim:#A99BB8;
     --moss:#7FA35E; --blood:#C2455A; --amber:#E8C547;
   }
-  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
   html,body{margin:0;background:var(--night);color:var(--bone);font-family:Rubik,system-ui,sans-serif;font-size:16px}
   html,body{height:var(--app-h,100%);overflow:hidden;overscroll-behavior:none}
   body{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);display:flex;flex-direction:column}
@@ -691,13 +691,22 @@ $('#view').onclick = async e => {
     txt.textContent = d >= LIMIT ? 'Släpp för att ladda om' : 'Dra för att ladda om';
   };
   const reset = () => { ptr.style.transition = ''; ptr.style.opacity = 0; ptr.style.transform = ''; icon.style.transform = ''; };
+  let startX = 0, locked = false;
   document.addEventListener('touchstart', e => {
-    if (loading || sheetOpen || scroller.scrollTop > 0) { startY = null; return; }
-    startY = e.touches[0].clientY; dy = 0;
+    // Never start a pull on side scrolling rows (filters, stats) or form fields
+    if (loading || sheetOpen || scroller.scrollTop > 0 || e.target.closest('.chips,.stats,input,textarea,select')) { startY = null; return; }
+    startY = e.touches[0].clientY; startX = e.touches[0].clientX; dy = 0; locked = false;
   }, {passive:true});
   document.addEventListener('touchmove', e => {
     if (startY === null) return;
-    dy = (e.touches[0].clientY - startY) * 0.5;
+    const rawY = e.touches[0].clientY - startY, rawX = e.touches[0].clientX - startX;
+    if (!locked){
+      if (Math.abs(rawX) < 8 && Math.abs(rawY) < 8) return;
+      // Decide direction once: mostly sideways or upwards cancels the pull
+      if (Math.abs(rawX) > Math.abs(rawY) * 0.7 || rawY < 0) { startY = null; dy = 0; reset(); return; }
+      locked = true;
+    }
+    dy = rawY * 0.5;
     if (dy > 0 && scroller.scrollTop <= 0) set(dy); else { dy = 0; reset(); }
   }, {passive:true});
   document.addEventListener('touchend', async () => {
