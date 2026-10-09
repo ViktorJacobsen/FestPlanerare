@@ -71,12 +71,14 @@
   nav button i{display:block;font-style:normal;font-size:22px;margin-bottom:2px}
   nav button.on{color:var(--pumpkin)}
   .sheetbg{position:fixed;inset:0;background:rgba(10,5,15,.6);display:none;z-index:10}
-  .sheet{position:fixed;left:0;right:0;bottom:0;max-height:90vh;overflow-y:auto;background:var(--night2);border-radius:22px 22px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));z-index:11;transform:translateY(100%);transition:transform .22s ease}
+  .sheet{position:fixed;left:0;right:0;bottom:0;max-height:90vh;overflow-y:auto;overflow-x:hidden;background:var(--night2);border-radius:22px 22px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));z-index:11;transform:translateY(100%);transition:transform .22s ease}
   .sheetbg.open{display:block}
   .sheet.open{transform:none}
   .sheet h3{margin:0 0 14px;font-size:19px}
   label{display:block;font-size:13px;color:var(--dim);margin:12px 0 5px}
   input,select,textarea{width:100%;background:var(--night);border:1px solid var(--line);color:var(--bone);border-radius:12px;padding:13px;font:inherit;font-size:16px}
+  input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;min-height:50px;text-align:left}
+  input[type=date]::-webkit-date-and-time-value{text-align:left}
   textarea{min-height:200px;resize:vertical;line-height:1.4}
   input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--pumpkin);outline-offset:1px}
   .seg{display:flex;gap:6px}
@@ -119,7 +121,7 @@
 const DB_URL = 'https://festplanering-8463f-default-rtdb.europe-west1.firebasedatabase.app';
 const ROOT = DB_URL.replace(/\/$/, '') + '/hw';
 const DEFAULT_CATS = ['Inhandling', 'Förberedelser', 'Aktivitetsförslag'];
-const DEFAULTS = {guests:[], expenses:[], tasks:[], settings:{name:'Halloweenfesten', hosts:[], price:0, receiver:'', categories:DEFAULT_CATS, maybeShare:50, hostsPay:false}};
+const DEFAULTS = {guests:[], expenses:[], tasks:[], settings:{name:'Halloweenfesten', hosts:[], price:0, receiver:'', categories:DEFAULT_CATS, maybeShare:50}};
 const STATUS = [
   {k:'ja', label:'Ja', cls:'s-ja'},
   {k:'kanske', label:'Kanske', cls:'s-kanske'},
@@ -240,7 +242,7 @@ function estimate(){
   const cost = state.tasks.reduce((a,t) => a + (Number(t.est)||0), 0);
   const spent = state.expenses.reduce((a,e) => a + (Number(e.amount)||0), 0);
   const share = Number(s.maybeShare ?? 50);
-  const people = n.ja + Math.round(n.kanske * share / 100) + (s.hostsPay ? s.hosts.length : 0);
+  const people = n.ja + Math.round(n.kanske * share / 100);
   const exact = people ? cost / people : 0;
   const suggested = Math.ceil(exact / 10) * 10;
   return {cost, spent, share, people, exact, suggested, n};
@@ -255,8 +257,7 @@ function estimateBox(){
     <div class="kv"><span>Utlagt hittills</span><span>${kr(e.spent)}</span></div>
     <label for="maybeShare">Andel av Kanske som kommer: <b id="shareLbl">${e.share} %</b></label>
     <input id="maybeShare" type="range" min="0" max="100" step="10" value="${e.share}" style="padding:0">
-    <label style="display:flex;align-items:center;gap:8px;color:var(--bone)"><input id="hostsPay" type="checkbox" ${s.hostsPay?'checked':''} style="width:auto">Värdarna betalar också inträde</label>
-    <div class="kv"><span>Förväntat antal betalande</span><span>${e.people} st</span></div>
+    <div class="kv"><span>Förväntat antal betalande gäster</span><span>${e.people} st</span></div>
     <div class="kv total"><span>Förslag på inträde</span><span style="color:var(--pumpkin)">${e.people ? kr(e.suggested) : 'Inga gäster än'}</span></div>
     ${e.people ? `<p class="note" style="margin-top:4px">Exakt för att gå jämnt ut: ${kr(e.exact)} per person.${current ? ` Nuvarande swishpris ${kr(current)} ger ${kr(current*e.people)}.` : ''}</p>
     ${e.suggested !== current ? `<button class="btn pri wide" id="usePrice" style="margin:8px 0 0">Använd ${kr(e.suggested)} som swishpris</button>` : ''}` : ''}
@@ -583,7 +584,6 @@ $('#view').addEventListener('input', e => {
 });
 $('#view').addEventListener('change', e => {
   if (e.target.id === 'maybeShare'){ const v = Number(e.target.value); e.target.blur(); updateSettings(() => ({maybeShare: v})); }
-  if (e.target.id === 'hostsPay'){ const v = e.target.checked; updateSettings(() => ({hostsPay: v})); }
 });
 
 $('#view').onclick = async e => {
