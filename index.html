@@ -261,32 +261,51 @@ function settlement(){
   return {total, swish, rest, share, balances, transfers};
 }
 
-function estimate(){
+function estimate(shareOverride){
   const s = state.settings, n = guestNumbers();
   const cost = state.tasks.reduce((a,t) => a + (Number(t.est)||0), 0);
   const spent = state.expenses.reduce((a,e) => a + (Number(e.amount)||0), 0);
-  const share = Number(s.maybeShare ?? 50);
+  const share = shareOverride ?? Number(s.maybeShare ?? 50);
   const people = n.ja + Math.round(n.kanske * share / 100);
   const exact = people ? cost / people : 0;
   const suggested = Math.ceil(exact / 10) * 10;
   return {cost, spent, share, people, exact, suggested, n};
 }
+let draftPrice = null; // price typed in the calculator but not yet saved
+function calcHtml(price, shareOverride){
+  const e = estimate(shareOverride), hosts = state.settings.hosts.length;
+  const saved = Number(state.settings.price) || 0;
+  const income = price * e.people, diff = income - e.cost;
+  const perHost = hosts ? Math.abs(diff) / hosts : 0;
+  const good = diff >= 0;
+  return `
+    <div class="kv"><span>Förväntat antal betalande gäster</span><span>${e.people} st</span></div>
+    <div class="kv"><span>Intäkter (${e.people} x ${kr(price)})</span><span>${kr(income)}</span></div>
+    <div class="kv"><span>Uppskattad kostnad</span><span>- ${kr(e.cost)}</span></div>
+    <div class="kv total"><span>${good ? 'Över' : 'Saknas'}</span><span style="color:${good ? 'var(--moss)' : 'var(--blood)'}">${kr(Math.abs(diff))}</span></div>
+    ${hosts ? `<div class="kv"><span>${good ? 'Varje värd får tillbaka' : 'Varje värd betalar'} (${hosts} st)</span><span>${kr(perHost)}</span></div>` : ''}
+    ${e.people ? `<p class="note" style="margin-top:4px">För att gå jämnt ut krävs ${kr(e.exact)} per gäst.</p>` : ''}
+    ${price !== saved ? `<button class="btn pri wide" id="usePrice" style="margin:8px 0 0">Spara ${kr(price)} som swishpris</button>` : `<p class="note">Det här är det sparade swishpriset.</p>`}`;
+}
 function estimateBox(){
   const e = estimate(), s = state.settings;
-  if (!e.cost) return `<div class="box"><b>Uppskattning av inträde</b><p class="note">Lägg in uppskattad kostnad på punkterna i Planering, så räknar appen ut ett förslag på inträde här.</p></div>`;
-  const current = Number(s.price) || 0;
+  if (!e.cost) return `<div class="box"><b>Kalkyl för inträde</b><p class="note">Lägg in uppskattad kostnad på punkterna i Planering, så kan du räkna på inträdet här.</p></div>`;
+  const price = draftPrice ?? (Number(s.price) || e.suggested);
   return `<div class="box" id="estBox">
-    <b>Uppskattning av inträde</b>
+    <b>Kalkyl för inträde</b>
     <div class="kv" style="margin-top:8px"><span>Uppskattad kostnad</span><span>${kr(e.cost)}</span></div>
     <div class="kv"><span>Utlagt hittills</span><span>${kr(e.spent)}</span></div>
     <label for="maybeShare">Andel av Kanske som kommer: <b id="shareLbl">${e.share} %</b></label>
     <input id="maybeShare" type="range" min="0" max="100" step="10" value="${e.share}" style="padding:0">
-    <div class="kv"><span>Förväntat antal betalande gäster</span><span>${e.people} st</span></div>
-    <div class="kv total"><span>Förslag på inträde</span><span style="color:var(--pumpkin)">${e.people ? kr(e.suggested) : 'Inga gäster än'}</span></div>
-    ${e.people ? `<p class="note" style="margin-top:4px">Exakt för att gå jämnt ut: ${kr(e.exact)} per person.${current ? ` Nuvarande swishpris ${kr(current)} ger ${kr(current*e.people)}.` : ''}</p>
-    ${e.suggested !== current ? `<button class="btn pri wide" id="usePrice" style="margin:8px 0 0">Använd ${kr(e.suggested)} som swishpris</button>` : ''}` : ''}
+    <label for="calcPrice">Swishpris per gäst (kr)</label>
+    <div style="display:flex;gap:8px">
+      <input id="calcPrice" type="number" inputmode="numeric" value="${price}">
+      ${e.people ? `<button class="btn sec small" id="fillSuggested">Jämnt: ${kr(e.suggested)}</button>` : ''}
+    </div>
+    <div id="calcOut">${calcHtml(price)}</div>
   </div>`;
 }
+const currentDraft = () => { const v = parseFloat(String($('#calcPrice')?.value ?? '').replace(',','.')); return isNaN(v) ? 0 : v; };
 
 // ---------- views ----------
 function render(){
@@ -615,14 +634,18 @@ $('#fab').onclick = () => ({guests:guestSheet, money:expenseSheet, tasks:taskShe
 
 $('#view').addEventListener('input', e => {
   if (e.target.id === 'search'){ query = e.target.value; $('#glist').innerHTML = guestListHtml(); }
-  if (e.target.id === 'maybeShare') $('#shareLbl').textContent = e.target.value + ' %';
+  if (e.target.id === 'maybeShare'){
+    $('#shareLbl').textContent = e.target.value + ' %';
+    $('#calcOut').innerHTML = calcHtml(currentDraft(), Number(e.target.value));
+  }
+  if (e.target.id === 'calcPrice'){ draftPrice = currentDraft(); $('#calcOut').innerHTML = calcHtml(draftPrice); }
 });
 $('#view').addEventListener('change', e => {
   if (e.target.id === 'maybeShare'){ const v = Number(e.target.value); e.target.blur(); updateSettings(() => ({maybeShare: v})); }
 });
 
 $('#view').onclick = async e => {
-  const d = e.target.closest('[data-show],[data-swf],[data-cat],[data-owner],[data-addincat],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],[data-delcat],#saveSettings,#addHost,#addCat,#import,#copyUnpaid,#usePrice');
+  const d = e.target.closest('[data-show],[data-swf],[data-cat],[data-owner],[data-addincat],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],[data-delcat],#saveSettings,#addHost,#addCat,#import,#copyUnpaid,#usePrice,#fillSuggested');
   if (!d) return;
   const ds = d.dataset;
   if (ds.show){ shown[ds.show] = !shown[ds.show]; render(); }
@@ -663,9 +686,15 @@ $('#view').onclick = async e => {
     toast('Sparat');
   }
   else if (d.id === 'usePrice'){
-    const v = estimate().suggested;
+    const v = currentDraft();
+    draftPrice = null;
     await updateSettings(() => ({price: v}));
     toast(`Swishpriset är nu ${kr(v)}`);
+  }
+  else if (d.id === 'fillSuggested'){
+    draftPrice = estimate().suggested;
+    $('#calcPrice').value = draftPrice;
+    $('#calcOut').innerHTML = calcHtml(draftPrice);
   }
   else if (d.id === 'import') importSheet();
   else if (d.id === 'copyUnpaid'){
