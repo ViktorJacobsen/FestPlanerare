@@ -130,9 +130,9 @@
 <script>
 // iOS home screen apps with a translucent status bar report a too short viewport,
 // leaving a gap at the bottom. Use the real screen height instead.
+// iOS only: navigator.standalone exists only there, Android reports the height correctly.
 (() => {
-  const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
-  if (!standalone) return;
+  if (window.navigator.standalone !== true) return;
   const fit = () => {
     const portrait = matchMedia('(orientation: portrait)').matches;
     const screenH = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
@@ -155,7 +155,7 @@ const STATUS = [
 let state = JSON.parse(JSON.stringify(DEFAULTS));
 let tab = 'guests', sheetOpen = false, online = true;
 let shown = {ja:true, kanske:true, nej:true, ej:true}, swishFilter = 'alla', query = '';
-let taskCat = 'alla';
+let taskCat = 'alla', taskOwner = 'alla';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -380,14 +380,22 @@ function viewTasks(){
   const fmt = d => d ? new Date(d+'T12:00').toLocaleDateString('sv-SE',{weekday:'short',day:'numeric',month:'short'}) : '';
   const chipCats = groups.filter(c => c);
   const visible = taskCat === 'alla' ? groups : groups.filter(c => c === taskCat);
-  const left = state.tasks.filter(t => !t.done).length;
+  const hosts = state.settings.hosts;
+  if (taskOwner !== 'alla' && taskOwner !== '__none' && !hosts.includes(taskOwner)) taskOwner = 'alla';
+  const ownerOk = t => taskOwner === 'alla' || (taskOwner === '__none' ? !t.owner : t.owner === taskOwner);
+  const pool = state.tasks.filter(ownerOk);
+  const left = pool.filter(t => !t.done).length;
   let html = `
-    <div class="stats"><div class="stat"><b>${left}</b><span>kvar</span></div><div class="stat"><b>${state.tasks.length-left}</b><span>klara</span></div></div>
-    <div class="chips"><button class="chip radio ${taskCat==='alla'?'on':''}" data-cat="alla">Alla</button>${chipCats.map(c => `<button class="chip radio ${taskCat===c?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`;
+    <div class="stats"><div class="stat"><b>${left}</b><span>kvar</span></div><div class="stat"><b>${pool.length-left}</b><span>klara</span></div></div>
+    <div class="chips"><span class="lbl">Kategori:</span><button class="chip radio ${taskCat==='alla'?'on':''}" data-cat="alla">Alla</button>${chipCats.map(c => `<button class="chip radio ${taskCat===c?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>
+    ${hosts.length ? `<div class="chips"><span class="lbl">Ansvarig:</span>${[['alla','Alla'], ...hosts.map(h => [h,h]), ['__none','Ingen']].map(([k,l]) => `<button class="chip radio ${taskOwner===k?'on':''}" data-owner="${esc(k)}">${esc(l)}</button>`).join('')}</div>` : ''}`;
   if (!state.tasks.length && !chipCats.length) return html + `<div class="empty">Inga punkter än. Tryck på + för att lägga till.</div>`;
+  if (taskOwner !== 'alla' && !visible.some(cat => pool.some(t => (t.category || '') === cat)))
+    html += `<div class="empty">${taskOwner === '__none' ? 'Alla punkter har en ansvarig.' : `${esc(taskOwner)} har inga punkter här än.`}</div>`;
   for (const cat of visible){
-    const items = state.tasks.filter(t => (t.category || '') === cat)
+    const items = pool.filter(t => (t.category || '') === cat)
       .sort((a,b) => (a.done-b.done) || (a.due||'9999').localeCompare(b.due||'9999') || a.title.localeCompare(b.title,'sv'));
+    if (!items.length && taskOwner !== 'alla') continue;
     const open = items.filter(t => !t.done).length;
     const est = items.reduce((a,t) => a + (Number(t.est)||0), 0);
     html += `<h2>${esc(cat || 'Övrigt')} <span class="cnt">${items.length ? `${open} kvar av ${items.length}` : ''}${est ? `, ca ${kr(est)}` : ''}</span></h2>`;
@@ -550,7 +558,7 @@ function expenseSheet(id){
 
 function taskSheet(id, presetCat){
   const cats = state.settings.categories;
-  const t = state.tasks.find(x => x.id === id) || {title:'', category: presetCat ?? (taskCat !== 'alla' ? taskCat : (cats[0] || '')), owner:'', due:'', note:'', done:false};
+  const t = state.tasks.find(x => x.id === id) || {title:'', category: presetCat ?? (taskCat !== 'alla' ? taskCat : (cats[0] || '')), owner: state.settings.hosts.includes(taskOwner) ? taskOwner : '', due:'', note:'', done:false};
   const catOpts = [...new Set([...cats, t.category].filter(Boolean))];
   openSheet(`
     <h3>${id ? 'Redigera punkt' : 'Ny punkt'}</h3>
@@ -614,12 +622,13 @@ $('#view').addEventListener('change', e => {
 });
 
 $('#view').onclick = async e => {
-  const d = e.target.closest('[data-show],[data-swf],[data-cat],[data-addincat],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],[data-delcat],#saveSettings,#addHost,#addCat,#import,#copyUnpaid,#usePrice');
+  const d = e.target.closest('[data-show],[data-swf],[data-cat],[data-owner],[data-addincat],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],[data-delcat],#saveSettings,#addHost,#addCat,#import,#copyUnpaid,#usePrice');
   if (!d) return;
   const ds = d.dataset;
   if (ds.show){ shown[ds.show] = !shown[ds.show]; render(); }
   else if (ds.swf){ swishFilter = ds.swf; render(); }
   else if (ds.cat){ taskCat = ds.cat; render(); }
+  else if (ds.owner){ taskOwner = ds.owner; render(); }
   else if ('addincat' in ds) taskSheet(null, ds.addincat);
   else if (ds.cycle){ const g = state.guests.find(x => x.id===ds.cycle); patchItem('guests', ds.cycle, {status: STATUS[(STATUS.findIndex(s=>s.k===g.status)+1)%STATUS.length].k}); }
   else if (ds.paid){ const g = state.guests.find(x => x.id===ds.paid); patchItem('guests', ds.paid, {paid: !g.paid}); }
