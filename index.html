@@ -119,7 +119,7 @@
 const DB_URL = 'https://festplanering-8463f-default-rtdb.europe-west1.firebasedatabase.app';
 const ROOT = DB_URL.replace(/\/$/, '') + '/hw';
 const DEFAULT_CATS = ['Inhandling', 'Förberedelser', 'Aktivitetsförslag'];
-const DEFAULTS = {guests:[], expenses:[], tasks:[], settings:{name:'Halloweenfesten', hosts:[], price:0, receiver:'', categories:DEFAULT_CATS}};
+const DEFAULTS = {guests:[], expenses:[], tasks:[], settings:{name:'Halloweenfesten', hosts:[], price:0, receiver:'', categories:DEFAULT_CATS, maybeShare:50, hostsPay:false}};
 const STATUS = [
   {k:'ja', label:'Ja', cls:'s-ja'},
   {k:'kanske', label:'Kanske', cls:'s-kanske'},
@@ -235,6 +235,34 @@ function settlement(){
   return {total, swish, rest, share, balances, transfers};
 }
 
+function estimate(){
+  const s = state.settings, n = guestNumbers();
+  const cost = state.tasks.reduce((a,t) => a + (Number(t.est)||0), 0);
+  const spent = state.expenses.reduce((a,e) => a + (Number(e.amount)||0), 0);
+  const share = Number(s.maybeShare ?? 50);
+  const people = n.ja + Math.round(n.kanske * share / 100) + (s.hostsPay ? s.hosts.length : 0);
+  const exact = people ? cost / people : 0;
+  const suggested = Math.ceil(exact / 10) * 10;
+  return {cost, spent, share, people, exact, suggested, n};
+}
+function estimateBox(){
+  const e = estimate(), s = state.settings;
+  if (!e.cost) return `<div class="box"><b>Uppskattning av inträde</b><p class="note">Lägg in uppskattad kostnad på punkterna i Planering, så räknar appen ut ett förslag på inträde här.</p></div>`;
+  const current = Number(s.price) || 0;
+  return `<div class="box" id="estBox">
+    <b>Uppskattning av inträde</b>
+    <div class="kv" style="margin-top:8px"><span>Uppskattad kostnad</span><span>${kr(e.cost)}</span></div>
+    <div class="kv"><span>Utlagt hittills</span><span>${kr(e.spent)}</span></div>
+    <label for="maybeShare">Andel av Kanske som kommer: <b id="shareLbl">${e.share} %</b></label>
+    <input id="maybeShare" type="range" min="0" max="100" step="10" value="${e.share}" style="padding:0">
+    <label style="display:flex;align-items:center;gap:8px;color:var(--bone)"><input id="hostsPay" type="checkbox" ${s.hostsPay?'checked':''} style="width:auto">Värdarna betalar också inträde</label>
+    <div class="kv"><span>Förväntat antal betalande</span><span>${e.people} st</span></div>
+    <div class="kv total"><span>Förslag på inträde</span><span style="color:var(--pumpkin)">${e.people ? kr(e.suggested) : 'Inga gäster än'}</span></div>
+    ${e.people ? `<p class="note" style="margin-top:4px">Exakt för att gå jämnt ut: ${kr(e.exact)} per person.${current ? ` Nuvarande swishpris ${kr(current)} ger ${kr(current*e.people)}.` : ''}</p>
+    ${e.suggested !== current ? `<button class="btn pri wide" id="usePrice" style="margin:8px 0 0">Använd ${kr(e.suggested)} som swishpris</button>` : ''}` : ''}
+  </div>`;
+}
+
 // ---------- views ----------
 function render(){
   const s = state.settings;
@@ -294,9 +322,10 @@ function viewGuests(){
 
 function viewMoney(){
   const s = settlement(), hosts = state.settings.hosts;
-  if (!hosts.length) return `<div class="empty">Lägg först till värdarna under Inställningar.</div>`;
+  if (!hosts.length) return estimateBox() + `<div class="empty">Lägg till värdarna under Inställningar för att se utlägg och vem som swishar vem.</div>`;
   const needsReceiver = s.swish > 0 && !hosts.includes(state.settings.receiver);
-  return `
+  return estimateBox() + `
+    <h2>Utlägg</h2>
     <div class="box">
       <div class="kv"><span>Totala utlägg</span><span>${kr(s.total)}</span></div>
       <div class="kv"><span>Swish från gäster</span><span>- ${kr(s.swish)}</span></div>
@@ -335,12 +364,13 @@ function viewTasks(){
     const items = state.tasks.filter(t => (t.category || '') === cat)
       .sort((a,b) => (a.done-b.done) || (a.due||'9999').localeCompare(b.due||'9999') || a.title.localeCompare(b.title,'sv'));
     const open = items.filter(t => !t.done).length;
-    html += `<h2>${esc(cat || 'Övrigt')} <span class="cnt">${items.length ? `${open} kvar av ${items.length}` : ''}</span></h2>`;
+    const est = items.reduce((a,t) => a + (Number(t.est)||0), 0);
+    html += `<h2>${esc(cat || 'Övrigt')} <span class="cnt">${items.length ? `${open} kvar av ${items.length}` : ''}${est ? `, ca ${kr(est)}` : ''}</span></h2>`;
     html += items.length ? items.map(t => `<div class="row ${t.done?'done':''}">
       <button class="check ${t.done?'on':''}" data-done="${t.id}" aria-label="Klar">${t.done?'✓':''}</button>
       <div class="main" data-edittask="${t.id}">
         <div class="name">${esc(t.title)}</div>
-        <div class="meta">${[t.owner ? esc(t.owner) : '', fmt(t.due), t.note ? esc(t.note) : ''].filter(Boolean).join(', ') || 'Ingen ansvarig'}</div>
+        <div class="meta">${[t.owner ? esc(t.owner) : '', fmt(t.due), t.est ? `ca ${kr(Number(t.est))}` : '', t.note ? esc(t.note) : ''].filter(Boolean).join(', ') || 'Ingen ansvarig'}</div>
       </div>
       <button class="edit" data-edittask="${t.id}" aria-label="Redigera">✎</button>
     </div>`).join('') : `<button class="btn sec wide" data-addincat="${esc(cat)}">Lägg till i ${esc(cat)}</button>`;
@@ -505,6 +535,7 @@ function taskSheet(id, presetCat){
     <input id="tNewCat" placeholder="Namn på ny kategori" style="display:none;margin-top:8px">
     <label for="tOwner">Ansvarig</label><select id="tOwner"><option value="">Ingen än</option>${state.settings.hosts.map(h => `<option ${t.owner===h?'selected':''}>${esc(h)}</option>`).join('')}</select>
     <label for="tDue">Klart senast</label><input id="tDue" type="date" value="${esc(t.due)}">
+    <label for="tEst">Uppskattad kostnad (kr)</label><input id="tEst" type="number" inputmode="decimal" value="${esc(t.est ?? '')}" placeholder="Valfritt">
     <label for="tNote">Anteckning</label><input id="tNote" value="${esc(t.note)}" placeholder="T.ex. antal, länk, idé">
     ${sheetButtons(id)}
   `, () => {
@@ -526,7 +557,7 @@ function taskSheet(id, presetCat){
       closeSheet();
       if (category && !state.settings.categories.includes(category))
         await updateSettings(s => ({categories: s.categories.includes(category) ? s.categories : [...s.categories, category]}));
-      saveItem('tasks', {id: id || uid(), title, category, owner: $('#tOwner').value, due: $('#tDue').value, note: $('#tNote').value.trim(), done: t.done});
+      saveItem('tasks', {id: id || uid(), title, category, owner: $('#tOwner').value, due: $('#tDue').value, note: $('#tNote').value.trim(), est: parseFloat(String($('#tEst').value).replace(',','.')) || 0, done: t.done});
     };
   });
 }
@@ -548,10 +579,15 @@ $('#fab').onclick = () => ({guests:guestSheet, money:expenseSheet, tasks:taskShe
 
 $('#view').addEventListener('input', e => {
   if (e.target.id === 'search'){ query = e.target.value; $('#glist').innerHTML = guestListHtml(); }
+  if (e.target.id === 'maybeShare') $('#shareLbl').textContent = e.target.value + ' %';
+});
+$('#view').addEventListener('change', e => {
+  if (e.target.id === 'maybeShare'){ const v = Number(e.target.value); e.target.blur(); updateSettings(() => ({maybeShare: v})); }
+  if (e.target.id === 'hostsPay'){ const v = e.target.checked; updateSettings(() => ({hostsPay: v})); }
 });
 
 $('#view').onclick = async e => {
-  const d = e.target.closest('[data-show],[data-swf],[data-cat],[data-addincat],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],[data-delcat],#saveSettings,#addHost,#addCat,#import,#copyUnpaid');
+  const d = e.target.closest('[data-show],[data-swf],[data-cat],[data-addincat],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],[data-delcat],#saveSettings,#addHost,#addCat,#import,#copyUnpaid,#usePrice');
   if (!d) return;
   const ds = d.dataset;
   if (ds.show){ shown[ds.show] = !shown[ds.show]; render(); }
@@ -589,6 +625,11 @@ $('#view').onclick = async e => {
     const receiver = $('#setRecv').value;
     await updateSettings(() => ({name, price, receiver}));
     toast('Sparat');
+  }
+  else if (d.id === 'usePrice'){
+    const v = estimate().suggested;
+    await updateSettings(() => ({price: v}));
+    toast(`Swishpriset är nu ${kr(v)}`);
   }
   else if (d.id === 'import') importSheet();
   else if (d.id === 'copyUnpaid'){
