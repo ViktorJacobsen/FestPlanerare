@@ -23,7 +23,7 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--night);color:var(--bone);font-family:Rubik,system-ui,sans-serif;font-size:16px}
   html,body{height:100%;overflow:hidden;overscroll-behavior:none}
-  body{position:fixed;inset:0;display:flex;flex-direction:column}
+  body{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);display:flex;flex-direction:column}
   #scroller{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;overflow-anchor:none;padding-bottom:96px}
   header{padding:calc(22px + env(safe-area-inset-top)) 18px 10px;position:relative;overflow:hidden}
   header h1{font-family:Creepster,Rubik,sans-serif;font-weight:400;font-size:44px;line-height:1;margin:0;color:var(--pumpkin);letter-spacing:1px;text-shadow:0 3px 0 #5a2a0a}
@@ -67,13 +67,13 @@
   .transfer:last-child{border-bottom:none}
   .transfer .amt{margin-left:auto;font-weight:700;color:var(--pumpkin)}
   .empty{color:var(--dim);text-align:center;padding:36px 10px;line-height:1.5}
-  .fab{position:fixed;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:none;background:var(--pumpkin);color:#2b1300;font-size:32px;box-shadow:0 6px 18px rgba(242,140,40,.35)}
-  nav{flex:0 0 auto;position:relative;background:#170f1f;border-top:1px solid var(--line);display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+  .fab{position:absolute;right:18px;bottom:calc(84px + env(safe-area-inset-bottom));width:58px;height:58px;border-radius:50%;border:none;background:var(--pumpkin);color:#2b1300;font-size:32px;box-shadow:0 6px 18px rgba(242,140,40,.35)}
+  nav{flex:0 0 auto;position:relative;background:#170f1f;border-top:1px solid var(--line);display:flex;padding-bottom:max(env(safe-area-inset-bottom),22px);z-index:5}
   nav button{flex:1;background:none;border:none;color:var(--dim);font:inherit;font-size:12px;padding:10px 0 12px}
   nav button i{display:block;font-style:normal;font-size:22px;margin-bottom:2px}
   nav button.on{color:var(--pumpkin)}
-  .sheetbg{position:fixed;inset:0;background:rgba(10,5,15,.6);display:none;z-index:10}
-  .sheet{position:fixed;left:0;right:0;bottom:0;max-height:90vh;overflow-y:auto;overflow-x:hidden;background:var(--night2);border-radius:22px 22px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));z-index:11;transform:translateY(100%);transition:transform .22s ease}
+  .sheetbg{position:absolute;inset:0;background:rgba(10,5,15,.6);display:none;z-index:10}
+  .sheet{position:absolute;left:0;right:0;bottom:0;max-height:90vh;overflow-y:auto;overflow-x:hidden;background:var(--night2);border-radius:22px 22px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));z-index:11;transform:translateY(100%);transition:transform .22s ease}
   .sheetbg.open{display:block}
   .sheet.open{transform:none}
   .sheet h3{margin:0 0 14px;font-size:19px}
@@ -96,9 +96,9 @@
   .hostrow{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
   .hostrow span{flex:1}
   .note{font-size:13px;color:var(--dim);line-height:1.45;margin-top:8px}
-  .toast{position:fixed;left:50%;bottom:calc(160px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--bone);color:var(--night);padding:12px 18px;border-radius:999px;font-weight:500;font-size:14px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
+  .toast{position:absolute;left:50%;bottom:calc(160px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--bone);color:var(--night);padding:12px 18px;border-radius:999px;font-weight:500;font-size:14px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
   .toast.show{opacity:1}
-  .ptr{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) - 60px);height:60px;opacity:0;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--dim);font-size:14px;z-index:4;pointer-events:none;transition:transform .2s ease}
+  .ptr{position:absolute;left:0;right:0;top:calc(env(safe-area-inset-top) - 60px);height:60px;opacity:0;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--dim);font-size:14px;z-index:4;pointer-events:none;transition:transform .2s ease}
   .ptr i{font-style:normal;font-size:22px;display:inline-block}
   .ptr.loading i{animation:spin .8s linear infinite}
   @keyframes spin{to{transform:rotate(360deg)}}
@@ -128,6 +128,20 @@
 <div class="ptr" id="ptr"><i>🎃</i><span>Dra för att ladda om</span></div>
 
 <script>
+// iOS home screen apps with a translucent status bar report a too short viewport,
+// leaving a gap at the bottom. Use the real screen height instead.
+(() => {
+  const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  if (!standalone) return;
+  const fit = () => {
+    const portrait = matchMedia('(orientation: portrait)').matches;
+    const screenH = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+    document.documentElement.style.setProperty('--app-h', Math.max(window.innerHeight, screenH) + 'px');
+  };
+  fit();
+  window.addEventListener('resize', fit);
+  window.addEventListener('orientationchange', () => setTimeout(fit, 300));
+})();
 const DB_URL = 'https://festplanering-8463f-default-rtdb.europe-west1.firebasedatabase.app';
 const ROOT = DB_URL.replace(/\/$/, '') + '/hw';
 const DEFAULT_CATS = ['Inhandling', 'Förberedelser', 'Aktivitetsförslag'];
