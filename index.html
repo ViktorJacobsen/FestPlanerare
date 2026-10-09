@@ -96,6 +96,11 @@
   .note{font-size:13px;color:var(--dim);line-height:1.45;margin-top:8px}
   .toast{position:fixed;left:50%;bottom:calc(160px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--bone);color:var(--night);padding:12px 18px;border-radius:999px;font-weight:500;font-size:14px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
   .toast.show{opacity:1}
+  .ptr{position:fixed;left:0;right:0;top:calc(env(safe-area-inset-top) - 60px);height:60px;display:flex;align-items:center;justify-content:center;gap:8px;color:var(--dim);font-size:14px;z-index:4;pointer-events:none;transition:transform .2s ease}
+  .ptr i{font-style:normal;font-size:22px;display:inline-block}
+  .ptr.loading i{animation:spin .8s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @media (prefers-reduced-motion:reduce){.ptr.loading i{animation:none}}
   @media (prefers-reduced-motion:reduce){.sheet,.toast{transition:none}}
 </style>
 </head>
@@ -116,6 +121,7 @@
 <div class="sheetbg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
 <div class="toast" id="toast"></div>
+<div class="ptr" id="ptr"><i>🎃</i><span>Dra för att ladda om</span></div>
 
 <script>
 const DB_URL = 'https://festplanering-8463f-default-rtdb.europe-west1.firebasedatabase.app';
@@ -637,6 +643,42 @@ $('#view').onclick = async e => {
     toast(await copyText(names.join(', ')) ? `${names.length} namn kopierade` : 'Kunde inte kopiera');
   }
 };
+
+// ---------- pull to refresh (only in the home screen app, the browser has its own) ----------
+(() => {
+  const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+  if (!standalone) return;
+  const ptr = $('#ptr'), icon = ptr.querySelector('i'), txt = ptr.querySelector('span');
+  const LIMIT = 80;
+  let startY = null, dy = 0, loading = false;
+  const set = d => {
+    ptr.style.transition = 'none';
+    ptr.style.transform = `translateY(${Math.min(d, LIMIT + 20)}px)`;
+    icon.style.transform = `rotate(${d * 3}deg)`;
+    txt.textContent = d >= LIMIT ? 'Släpp för att ladda om' : 'Dra för att ladda om';
+  };
+  const reset = () => { ptr.style.transition = ''; ptr.style.transform = ''; icon.style.transform = ''; };
+  document.addEventListener('touchstart', e => {
+    if (loading || sheetOpen || window.scrollY > 0) { startY = null; return; }
+    startY = e.touches[0].clientY; dy = 0;
+  }, {passive:true});
+  document.addEventListener('touchmove', e => {
+    if (startY === null) return;
+    dy = (e.touches[0].clientY - startY) * 0.5;
+    if (dy > 0 && window.scrollY <= 0) set(dy); else { dy = 0; reset(); }
+  }, {passive:true});
+  document.addEventListener('touchend', async () => {
+    if (startY === null) return;
+    startY = null;
+    if (dy < LIMIT) { reset(); return; }
+    loading = true;
+    ptr.classList.add('loading'); txt.textContent = 'Laddar om...';
+    ptr.style.transition = ''; ptr.style.transform = `translateY(${LIMIT}px)`; icon.style.transform = '';
+    // Fetch the page past the cache first, so a newly uploaded version is picked up
+    try { await fetch(location.href, {cache:'reload'}); } catch(e) {}
+    location.reload();
+  });
+})();
 
 // ---------- start ----------
 (async () => {
