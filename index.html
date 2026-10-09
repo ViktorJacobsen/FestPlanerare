@@ -22,7 +22,7 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--night);color:var(--bone);font-family:Rubik,system-ui,sans-serif;font-size:16px}
-  html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+  html,body{height:var(--app-h,100%);overflow:hidden;overscroll-behavior:none}
   body{position:fixed;top:0;left:0;right:0;height:var(--app-h,100%);display:flex;flex-direction:column}
   #scroller{flex:1 1 auto;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior-y:contain;overflow-anchor:none;padding-bottom:96px}
   header{padding:calc(22px + env(safe-area-inset-top)) 18px 10px;position:relative;overflow:hidden}
