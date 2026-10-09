@@ -22,7 +22,9 @@
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--night);color:var(--bone);font-family:Rubik,system-ui,sans-serif;font-size:16px}
-  body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
+  html{overflow-anchor:none;scroll-behavior:auto}
+  body{padding-bottom:calc(84px + env(safe-area-inset-bottom));min-height:100vh;min-height:100dvh}
+  main{min-height:calc(100vh - 120px);min-height:calc(100dvh - 120px)}
   header{padding:calc(22px + env(safe-area-inset-top)) 18px 10px;position:relative;overflow:hidden}
   header h1{font-family:Creepster,Rubik,sans-serif;font-weight:400;font-size:44px;line-height:1;margin:0;color:var(--pumpkin);letter-spacing:1px;text-shadow:0 3px 0 #5a2a0a}
   header .sub{color:var(--dim);font-size:14px;margin-top:6px}
@@ -580,7 +582,11 @@ async function copyText(text){
 // ---------- events ----------
 document.querySelector('nav').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
-  tab = b.dataset.tab; render(); window.scrollTo(0,0);
+  b.blur();
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  window.scrollTo(0,0);
+  tab = b.dataset.tab; render();
+  requestAnimationFrame(() => window.scrollTo(0,0));
 };
 $('#fab').onclick = () => ({guests:guestSheet, money:expenseSheet, tasks:taskSheet})[tab]?.();
 
