@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Halloweenfesten</title>
+<meta name="theme-color" content="#1E1428">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Halloween">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Creepster&family=Rubik:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
@@ -15,20 +23,24 @@
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
   html,body{margin:0;background:var(--night);color:var(--bone);font-family:Rubik,system-ui,sans-serif;font-size:16px}
   body{padding-bottom:calc(84px + env(safe-area-inset-bottom))}
-  header{padding:22px 18px 10px;position:relative;overflow:hidden}
+  header{padding:calc(22px + env(safe-area-inset-top)) 18px 10px;position:relative;overflow:hidden}
   header h1{font-family:Creepster,Rubik,sans-serif;font-weight:400;font-size:44px;line-height:1;margin:0;color:var(--pumpkin);letter-spacing:1px;text-shadow:0 3px 0 #5a2a0a}
   header .sub{color:var(--dim);font-size:14px;margin-top:6px}
   .moon{position:absolute;right:-30px;top:-40px;width:130px;height:130px;border-radius:50%;background:radial-gradient(circle at 40% 40%,#f6efd9,#d9cfb3);opacity:.12}
   .sync{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--moss);margin-right:6px;vertical-align:middle}
   .sync.off{background:var(--blood)}
   main{padding:0 14px}
-  .stats{display:flex;gap:8px;overflow-x:auto;padding:6px 0 14px;scrollbar-width:none}
+  .stats{display:flex;gap:8px;overflow-x:auto;padding:6px 0 12px;scrollbar-width:none}
   .stat{flex:0 0 auto;background:var(--night2);border:1px solid var(--line);border-radius:14px;padding:10px 14px;min-width:84px}
   .stat b{display:block;font-size:22px}
   .stat span{font-size:13px;color:var(--dim)}
-  .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:12px;scrollbar-width:none}
-  .chip{flex:0 0 auto;border:1px solid var(--line);background:transparent;color:var(--bone);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px}
-  .chip.on{background:var(--bone);color:var(--night);border-color:var(--bone)}
+  .tools{display:flex;gap:8px;margin-bottom:10px}
+  .search{flex:1}
+  .chips{display:flex;gap:6px;overflow-x:auto;padding-bottom:10px;scrollbar-width:none;align-items:center}
+  .chips .lbl{flex:0 0 auto;font-size:13px;color:var(--dim);margin-right:2px}
+  .chip{flex:0 0 auto;border:1px solid var(--line);background:transparent;color:var(--dim);border-radius:999px;padding:8px 14px;font:inherit;font-size:14px;text-decoration:line-through}
+  .chip.on{background:var(--bone);color:var(--night);border-color:var(--bone);text-decoration:none}
+  .chip.radio{text-decoration:none}
   .row{display:flex;align-items:center;gap:10px;padding:12px 4px;border-bottom:1px solid var(--line)}
   .row .main{flex:1;min-width:0}
   .row .name{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -45,6 +57,7 @@
   .done .name{text-decoration:line-through;color:var(--dim)}
   .edit{background:none;border:none;color:var(--dim);font-size:20px;padding:6px}
   h2{font-size:17px;margin:22px 0 8px;font-weight:700}
+  h2 .cnt{font-weight:400;color:var(--dim);font-size:14px}
   .box{background:var(--night2);border:1px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
   .kv{display:flex;justify-content:space-between;padding:5px 0}
   .kv.total{border-top:1px solid var(--line);margin-top:6px;padding-top:10px;font-weight:700}
@@ -58,13 +71,14 @@
   nav button i{display:block;font-style:normal;font-size:22px;margin-bottom:2px}
   nav button.on{color:var(--pumpkin)}
   .sheetbg{position:fixed;inset:0;background:rgba(10,5,15,.6);display:none;z-index:10}
-  .sheet{position:fixed;left:0;right:0;bottom:0;background:var(--night2);border-radius:22px 22px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));z-index:11;transform:translateY(100%);transition:transform .22s ease}
+  .sheet{position:fixed;left:0;right:0;bottom:0;max-height:90vh;overflow-y:auto;background:var(--night2);border-radius:22px 22px 0 0;padding:18px 18px calc(22px + env(safe-area-inset-bottom));z-index:11;transform:translateY(100%);transition:transform .22s ease}
   .sheetbg.open{display:block}
   .sheet.open{transform:none}
   .sheet h3{margin:0 0 14px;font-size:19px}
   label{display:block;font-size:13px;color:var(--dim);margin:12px 0 5px}
-  input,select{width:100%;background:var(--night);border:1px solid var(--line);color:var(--bone);border-radius:12px;padding:13px;font:inherit;font-size:16px}
-  input:focus,select:focus,button:focus-visible{outline:2px solid var(--pumpkin);outline-offset:1px}
+  input,select,textarea{width:100%;background:var(--night);border:1px solid var(--line);color:var(--bone);border-radius:12px;padding:13px;font:inherit;font-size:16px}
+  textarea{min-height:200px;resize:vertical;line-height:1.4}
+  input:focus,select:focus,textarea:focus,button:focus-visible{outline:2px solid var(--pumpkin);outline-offset:1px}
   .seg{display:flex;gap:6px}
   .seg button{flex:1;padding:11px 0;border-radius:12px;border:1px solid var(--line);background:transparent;color:var(--bone);font:inherit;font-size:14px}
   .seg button.on{border-color:transparent}
@@ -72,11 +86,15 @@
   .btn{flex:1;border:none;border-radius:14px;padding:15px;font:inherit;font-weight:500;font-size:16px}
   .btn.pri{background:var(--pumpkin);color:#2b1300}
   .btn.sec{background:var(--line);color:var(--bone)}
+  .btn.small{flex:0 0 auto;padding:12px 14px;font-size:14px}
   .btn.del{background:transparent;color:var(--blood);flex:0 0 auto;padding:15px 8px}
+  .wide{width:100%;margin-bottom:10px}
   .hostrow{display:flex;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid var(--line)}
   .hostrow span{flex:1}
   .note{font-size:13px;color:var(--dim);line-height:1.45;margin-top:8px}
-  @media (prefers-reduced-motion:reduce){.sheet{transition:none}}
+  .toast{position:fixed;left:50%;bottom:calc(160px + env(safe-area-inset-bottom));transform:translateX(-50%);background:var(--bone);color:var(--night);padding:12px 18px;border-radius:999px;font-weight:500;font-size:14px;z-index:20;opacity:0;pointer-events:none;transition:opacity .2s;white-space:nowrap}
+  .toast.show{opacity:1}
+  @media (prefers-reduced-motion:reduce){.sheet,.toast{transition:none}}
 </style>
 </head>
 <body>
@@ -90,19 +108,18 @@
 <nav>
   <button data-tab="guests" class="on"><i>🎃</i>Gäster</button>
   <button data-tab="money"><i>💸</i>Utlägg</button>
-  <button data-tab="tasks"><i>🕯️</i>Att göra</button>
+  <button data-tab="tasks"><i>🕯️</i>Planering</button>
   <button data-tab="settings"><i>⚙️</i>Inställningar</button>
 </nav>
 <div class="sheetbg" id="sheetbg"></div>
 <div class="sheet" id="sheet"></div>
+<div class="toast" id="toast"></div>
 
 <script>
-// ====== KLISTRA IN DIN FIREBASE-URL HÄR ======
 const DB_URL = 'https://festplanering-8463f-default-rtdb.europe-west1.firebasedatabase.app';
-// =============================================
 const ROOT = DB_URL.replace(/\/$/, '') + '/hw';
-const KEYS = {guests:1, expenses:1, tasks:1, settings:1};
-const DEFAULTS = {guests:[], expenses:[], tasks:[], settings:{name:'Halloweenfesten', hosts:[], price:0, receiver:''}};
+const DEFAULT_CATS = ['Inhandling', 'Förberedelser', 'Aktivitetsförslag'];
+const DEFAULTS = {guests:[], expenses:[], tasks:[], settings:{name:'Halloweenfesten', hosts:[], price:0, receiver:'', categories:DEFAULT_CATS}};
 const STATUS = [
   {k:'ja', label:'Ja', cls:'s-ja'},
   {k:'kanske', label:'Kanske', cls:'s-kanske'},
@@ -110,18 +127,25 @@ const STATUS = [
   {k:'ej', label:'Ej svarat', cls:'s-ej'}
 ];
 let state = JSON.parse(JSON.stringify(DEFAULTS));
-let tab = 'guests', guestFilter = 'alla', sheetOpen = false, online = true;
+let tab = 'guests', sheetOpen = false, online = true;
+let shown = {ja:true, kanske:true, nej:true, ej:true}, swishFilter = 'alla', query = '';
+let taskCat = 'alla';
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const kr = n => (Math.round(n*100)/100).toLocaleString('sv-SE', {maximumFractionDigits:2}) + ' kr';
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const norm = s => String(s).trim().toLowerCase().replace(/\s+/g,' ');
 
-// Each guest/expense/task is stored under its own id, so two people editing
-// different rows at the same time never overwrite each other.
+function toast(msg){
+  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ---------- database ----------
 async function api(path, method='GET', body){
   try{
-    const r = await fetch(`${ROOT}/${path}.json`, {
+    const r = await fetch(`${ROOT}${path ? '/'+path : ''}.json`, {
       method, headers:{'Content-Type':'application/json'},
       body: body === undefined ? undefined : JSON.stringify(body)
     });
@@ -133,18 +157,14 @@ async function api(path, method='GET', body){
     return undefined;
   }finally{ updateSync(); }
 }
+const toList = v => Array.isArray(v) ? v.filter(Boolean) : Object.values(v || {});
 function normalize(data){
   data = data || {};
   const s = {...DEFAULTS.settings, ...(data.settings || {})};
-  s.hosts = Array.isArray(s.hosts) ? s.hosts.filter(Boolean) : Object.values(s.hosts || {});
-  return {
-    guests: Object.values(data.guests || {}),
-    expenses: Object.values(data.expenses || {}),
-    tasks: Object.values(data.tasks || {}),
-    settings: s
-  };
+  s.hosts = toList(s.hosts);
+  s.categories = data.settings && 'categories' in data.settings ? toList(s.categories) : [...DEFAULT_CATS];
+  return {guests: toList(data.guests), expenses: toList(data.expenses), tasks: toList(data.tasks), settings: s};
 }
-// Local update first so the UI feels instant, then send to the database
 function saveItem(coll, item){
   const i = state[coll].findIndex(x => x.id === item.id);
   if (i >= 0) state[coll][i] = item; else state[coll].push(item);
@@ -163,9 +183,9 @@ function deleteItem(coll, id){
   render();
   return api(`${coll}/${id}`, 'DELETE');
 }
-// Settings: read the latest first so a host added by someone else isn't lost
 async function updateSettings(fn){
-  const fresh = normalize({settings: await api('settings')}).settings;
+  const raw = await api('settings');
+  const fresh = normalize({settings: raw === undefined ? state.settings : raw}).settings;
   const next = {...fresh, ...fn(fresh)};
   state.settings = next;
   render();
@@ -177,20 +197,18 @@ async function refresh(){
   const next = normalize(data);
   if (JSON.stringify(next) !== JSON.stringify(state)) { state = next; render(); }
 }
-function updateSync(){
-  $('#sync').className = 'sync' + (online ? '' : ' off');
-}
+function updateSync(){ $('#sync').className = 'sync' + (online ? '' : ' off'); }
 
 // ---------- calculations ----------
 function guestNumbers(){
   const g = state.guests, price = Number(state.settings.price) || 0;
-  const sum = st => g.filter(x => x.status === st).reduce((a,x) => a + (Number(x.count)||1), 0);
-  const paidPeople = g.filter(x => x.paid).reduce((a,x) => a + (Number(x.count)||1), 0);
+  const c = st => g.filter(x => x.status === st).length;
+  const unpaid = g.filter(x => x.status === 'ja' && !x.paid);
   return {
-    ja: sum('ja'), kanske: sum('kanske'), nej: sum('nej'), ej: sum('ej'),
-    received: paidPeople * price,
-    expected: sum('ja') * price,
-    unpaidJa: g.filter(x => x.status === 'ja' && !x.paid).length
+    ja:c('ja'), kanske:c('kanske'), nej:c('nej'), ej:c('ej'),
+    received: g.filter(x => x.paid).length * price,
+    expected: c('ja') * price,
+    unpaid
   };
 }
 function settlement(){
@@ -204,18 +222,15 @@ function settlement(){
     const got = state.settings.receiver === h ? swish : 0;
     return {host:h, paid, got, bal: paid - got - share};
   });
-  // Greedy: those who owe pay those who should get money back
   const debtors = balances.filter(b => b.bal < -0.5).map(b => ({...b, left:-b.bal}));
   const creditors = balances.filter(b => b.bal > 0.5).map(b => ({...b, left:b.bal}));
   const transfers = [];
-  for (const d of debtors){
-    for (const c of creditors){
-      if (d.left < 0.5) break;
-      if (c.left < 0.5) continue;
-      const amt = Math.min(d.left, c.left);
-      transfers.push({from:d.host, to:c.host, amt});
-      d.left -= amt; c.left -= amt;
-    }
+  for (const d of debtors) for (const c of creditors){
+    if (d.left < 0.5) break;
+    if (c.left < 0.5) continue;
+    const amt = Math.min(d.left, c.left);
+    transfers.push({from:d.host, to:c.host, amt});
+    d.left -= amt; c.left -= amt;
   }
   return {total, swish, rest, share, balances, transfers};
 }
@@ -231,13 +246,33 @@ function render(){
   $('#view').innerHTML = ({guests:viewGuests, money:viewMoney, tasks:viewTasks, settings:viewSettings})[tab]();
 }
 
+function filteredGuests(){
+  const q = norm(query);
+  return [...state.guests]
+    .filter(g => shown[g.status || 'ej'])
+    .filter(g => swishFilter === 'alla' || (swishFilter === 'ja' ? g.paid : !g.paid))
+    .filter(g => !q || norm(g.name).includes(q))
+    .sort((a,b) => a.name.localeCompare(b.name,'sv'));
+}
+function guestListHtml(){
+  const list = filteredGuests(), price = Number(state.settings.price) || 0;
+  if (!state.guests.length) return `<div class="empty">Inga gäster än. Tryck på Importera för att klistra in en lista, eller på + för att lägga till en i taget.</div>`;
+  if (!list.length) return `<div class="empty">Ingen gäst matchar sökningen eller filtret.</div>`;
+  return `<div class="note" style="margin:0 0 4px">Visar ${list.length} av ${state.guests.length}</div>` + list.map(g => {
+    const st = STATUS.find(x => x.k === g.status) || STATUS[3];
+    const meta = g.paid ? 'Swishat' : (g.status === 'ja' && price ? `Ska swisha ${kr(price)}` : '');
+    return `<div class="row">
+      <div class="main" data-editguest="${g.id}">
+        <div class="name">${esc(g.name)}</div>
+        ${meta ? `<div class="meta">${meta}</div>` : ''}
+      </div>
+      <button class="pill ${st.cls}" data-cycle="${g.id}" aria-label="Byt svar">${st.label}</button>
+      <button class="swish ${g.paid?'on':''}" data-paid="${g.id}" aria-label="Swishat">${g.paid?'✓':'kr'}</button>
+    </div>`;
+  }).join('');
+}
 function viewGuests(){
   const n = guestNumbers();
-  const filters = [['alla','Alla'],['ja','Ja'],['kanske','Kanske'],['nej','Nej'],['ej','Ej svarat'],['ejswish','Ej swishat']];
-  let list = [...state.guests].sort((a,b) => a.name.localeCompare(b.name,'sv'));
-  if (guestFilter === 'ejswish') list = list.filter(g => g.status === 'ja' && !g.paid);
-  else if (guestFilter !== 'alla') list = list.filter(g => g.status === guestFilter);
-  const price = Number(state.settings.price) || 0;
   return `
     <div class="stats">
       <div class="stat"><b>${n.ja}</b><span>Ja</span></div>
@@ -246,62 +281,80 @@ function viewGuests(){
       <div class="stat"><b>${n.ej}</b><span>Ej svarat</span></div>
       <div class="stat"><b>${kr(n.received)}</b><span>av ${kr(n.expected)} swishat</span></div>
     </div>
-    <div class="chips">${filters.map(([k,l]) => `<button class="chip ${guestFilter===k?'on':''}" data-filter="${k}">${l}${k==='ejswish'&&n.unpaidJa?` (${n.unpaidJa})`:''}</button>`).join('')}</div>
-    ${list.length ? list.map(g => {
-      const st = STATUS.find(x => x.k === g.status) || STATUS[3];
-      const c = Number(g.count)||1;
-      return `<div class="row">
-        <div class="main" data-editguest="${g.id}">
-          <div class="name">${esc(g.name)}${c>1?` +${c-1}`:''}</div>
-          <div class="meta">${g.paid ? `Swishat ${price?kr(c*price):''}` : (g.status==='ja' && price ? `Ska swisha ${kr(c*price)}` : '')}</div>
-        </div>
-        <button class="pill ${st.cls}" data-cycle="${g.id}" aria-label="Byt svar">${st.label}</button>
-        <button class="swish ${g.paid?'on':''}" data-paid="${g.id}" aria-label="Swishat">${g.paid?'✓':'kr'}</button>
-      </div>`;
-    }).join('') : `<div class="empty">${state.guests.length ? 'Ingen gäst matchar filtret.' : 'Inga gäster än. Tryck på + för att lägga till dem från Facebook-evenemanget.'}</div>`}
+    ${n.unpaid.length ? `<button class="btn sec wide" id="copyUnpaid">Kopiera namn som inte swishat (${n.unpaid.length})</button>` : ''}
+    <div class="tools">
+      <input class="search" id="search" type="search" placeholder="Sök gäst" value="${esc(query)}" autocomplete="off">
+      <button class="btn sec small" id="import">Importera</button>
+    </div>
+    <div class="chips"><span class="lbl">Visa:</span>${STATUS.map(s => `<button class="chip ${shown[s.k]?'on':''}" data-show="${s.k}">${s.label}</button>`).join('')}</div>
+    <div class="chips"><span class="lbl">Swish:</span>${[['alla','Alla'],['nej','Ej swishat'],['ja','Swishat']].map(([k,l]) => `<button class="chip radio ${swishFilter===k?'on':''}" data-swf="${k}">${l}</button>`).join('')}</div>
+    <div id="glist">${guestListHtml()}</div>
     <p class="note">Tryck på svaret för att byta mellan Ja, Kanske, Nej och Ej svarat. Tryck på namnet för att redigera.</p>`;
 }
 
 function viewMoney(){
   const s = settlement(), hosts = state.settings.hosts;
   if (!hosts.length) return `<div class="empty">Lägg först till värdarna under Inställningar.</div>`;
-  const byHost = hosts.map(h => ({h, items: state.expenses.filter(e => e.host === h)}));
   const needsReceiver = s.swish > 0 && !hosts.includes(state.settings.receiver);
   return `
     <div class="box">
       <div class="kv"><span>Totala utlägg</span><span>${kr(s.total)}</span></div>
-      <div class="kv"><span>Swish från gäster</span><span>− ${kr(s.swish)}</span></div>
+      <div class="kv"><span>Swish från gäster</span><span>- ${kr(s.swish)}</span></div>
       <div class="kv total"><span>Kvar att dela</span><span>${kr(s.rest)}</span></div>
       <div class="kv"><span>Per värd (${hosts.length} st)</span><span>${kr(s.share)}</span></div>
     </div>
     ${needsReceiver ? `<p class="note" style="color:var(--amber)">Välj vem som tar emot swishen under Inställningar, annars blir uträkningen fel.</p>` : ''}
     <h2>Vem swishar vem</h2>
     <div class="box">${s.transfers.length ? s.transfers.map(t => `<div class="transfer"><span>${esc(t.from)}</span><span style="color:var(--dim)">swishar till</span><span>${esc(t.to)}</span><span class="amt">${kr(t.amt)}</span></div>`).join('') : '<div class="note" style="margin:0">Allt är jämnt, ingen behöver swisha någon.</div>'}</div>
-    ${byHost.map(({h,items}) => {
+    ${hosts.map(h => {
+      const items = state.expenses.filter(e => e.host === h);
       const b = s.balances.find(x => x.host === h);
-      return `<h2>${esc(h)} <span style="font-weight:400;color:var(--dim);font-size:14px">lagt ut ${kr(b.paid)}${b.got?`, fått in ${kr(b.got)} swish`:''}</span></h2>
+      return `<h2>${esc(h)} <span class="cnt">lagt ut ${kr(b.paid)}${b.got?`, fått in ${kr(b.got)} swish`:''}</span></h2>
       ${items.length ? items.map(e => `<div class="row"><div class="main" data-editexp="${e.id}"><div class="name">${esc(e.what)}</div></div><div>${kr(Number(e.amount)||0)}</div><button class="edit" data-editexp="${e.id}" aria-label="Redigera">✎</button></div>`).join('') : '<div class="note">Inga utlägg.</div>'}`;
     }).join('')}`;
 }
 
+function taskGroups(){
+  const cats = state.settings.categories;
+  const used = [...new Set(state.tasks.map(t => t.category || ''))];
+  const order = [...cats, ...used.filter(c => c && !cats.includes(c))];
+  if (used.includes('')) order.push('');
+  return order;
+}
 function viewTasks(){
-  const list = [...state.tasks].sort((a,b) => (a.done-b.done) || (a.due||'9999').localeCompare(b.due||'9999'));
-  const left = state.tasks.filter(t => !t.done).length;
-  if (!list.length) return `<div class="empty">Inga uppgifter än. Tryck på + och lägg till t.ex. "Köpa pumpor" eller "Fixa spellista".</div>`;
+  const groups = taskGroups();
   const fmt = d => d ? new Date(d+'T12:00').toLocaleDateString('sv-SE',{weekday:'short',day:'numeric',month:'short'}) : '';
-  return `<div class="stats"><div class="stat"><b>${left}</b><span>kvar</span></div><div class="stat"><b>${state.tasks.length-left}</b><span>klara</span></div></div>
-    ${list.map(t => `<div class="row ${t.done?'done':''}">
+  const chipCats = groups.filter(c => c);
+  const visible = taskCat === 'alla' ? groups : groups.filter(c => c === taskCat);
+  const left = state.tasks.filter(t => !t.done).length;
+  let html = `
+    <div class="stats"><div class="stat"><b>${left}</b><span>kvar</span></div><div class="stat"><b>${state.tasks.length-left}</b><span>klara</span></div></div>
+    <div class="chips"><button class="chip radio ${taskCat==='alla'?'on':''}" data-cat="alla">Alla</button>${chipCats.map(c => `<button class="chip radio ${taskCat===c?'on':''}" data-cat="${esc(c)}">${esc(c)}</button>`).join('')}</div>`;
+  if (!state.tasks.length && !chipCats.length) return html + `<div class="empty">Inga punkter än. Tryck på + för att lägga till.</div>`;
+  for (const cat of visible){
+    const items = state.tasks.filter(t => (t.category || '') === cat)
+      .sort((a,b) => (a.done-b.done) || (a.due||'9999').localeCompare(b.due||'9999') || a.title.localeCompare(b.title,'sv'));
+    const open = items.filter(t => !t.done).length;
+    html += `<h2>${esc(cat || 'Övrigt')} <span class="cnt">${items.length ? `${open} kvar av ${items.length}` : ''}</span></h2>`;
+    html += items.length ? items.map(t => `<div class="row ${t.done?'done':''}">
       <button class="check ${t.done?'on':''}" data-done="${t.id}" aria-label="Klar">${t.done?'✓':''}</button>
       <div class="main" data-edittask="${t.id}">
         <div class="name">${esc(t.title)}</div>
-        <div class="meta">${[t.owner ? esc(t.owner) : 'Ingen ansvarig', fmt(t.due)].filter(Boolean).join(', ')}</div>
+        <div class="meta">${[t.owner ? esc(t.owner) : '', fmt(t.due), t.note ? esc(t.note) : ''].filter(Boolean).join(', ') || 'Ingen ansvarig'}</div>
       </div>
       <button class="edit" data-edittask="${t.id}" aria-label="Redigera">✎</button>
-    </div>`).join('')}`;
+    </div>`).join('') : `<button class="btn sec wide" data-addincat="${esc(cat)}">Lägg till i ${esc(cat)}</button>`;
+  }
+  return html;
 }
 
 function viewSettings(){
   const s = state.settings;
+  const listBox = (items, delAttr, inputId, addId, placeholder) => `
+    <div class="box">
+      ${items.map(h => `<div class="hostrow"><span>${esc(h)}</span><button class="btn del" ${delAttr}="${esc(h)}">Ta bort</button></div>`).join('') || '<div class="note" style="margin:0">Inga än.</div>'}
+      <div style="display:flex;gap:8px;margin-top:12px"><input id="${inputId}" placeholder="${placeholder}"><button class="btn pri small" id="${addId}">Lägg till</button></div>
+    </div>`;
   return `
     <div class="box">
       <label for="setName">Festens namn</label>
@@ -313,12 +366,10 @@ function viewSettings(){
       <div class="btns"><button class="btn pri" id="saveSettings">Spara</button></div>
     </div>
     <h2>Värdar</h2>
-    <div class="box">
-      ${s.hosts.map(h => `<div class="hostrow"><span>${esc(h)}</span><button class="btn del" data-delhost="${esc(h)}">Ta bort</button></div>`).join('') || '<div class="note" style="margin:0">Inga värdar än.</div>'}
-      <label for="newHost">Lägg till värd</label>
-      <div style="display:flex;gap:8px"><input id="newHost" placeholder="Namn"><button class="btn pri" style="flex:0 0 auto" id="addHost">Lägg till</button></div>
-    </div>
-    <p class="note">All data delas med alla som har länken. Rött i hörnet uppe till vänster betyder att appen inte når databasen.</p>`;
+    ${listBox(s.hosts, 'data-delhost', 'newHost', 'addHost', 'Namn')}
+    <h2>Kategorier i planeringen</h2>
+    ${listBox(s.categories, 'data-delcat', 'newCat', 'addCat', 'T.ex. Musik')}
+    <p class="note">Tar du bort en kategori hamnar dess punkter under Övrigt tills du flyttar dem. All data delas med alla som har länken. Röd prick uppe till vänster betyder att appen inte når databasen.</p>`;
 }
 
 // ---------- sheets ----------
@@ -335,17 +386,17 @@ function closeSheet(){
   sheetOpen = false;
 }
 $('#sheetbg').onclick = closeSheet;
+const sheetButtons = id => `<div class="btns">${id?'<button class="btn del" id="del">Ta bort</button>':''}<button class="btn sec" id="cancel">Avbryt</button><button class="btn pri" id="ok">Spara</button></div>`;
 
 function guestSheet(id){
-  const g = state.guests.find(x => x.id === id) || {name:'', status:'ej', count:1, paid:false};
-  let status = g.status;
+  const g = state.guests.find(x => x.id === id) || {name:'', status:'ej', paid:false};
+  let status = g.status || 'ej';
   openSheet(`
     <h3>${id ? 'Redigera gäst' : 'Ny gäst'}</h3>
     <label for="gName">Namn</label><input id="gName" value="${esc(g.name)}" autocomplete="off">
     <label>Svar</label><div class="seg" id="gStatus">${STATUS.map(s => `<button data-s="${s.k}" class="${s.k===status?'on '+s.cls:''}">${s.label}</button>`).join('')}</div>
-    <label for="gCount">Antal personer (inkl. sällskap)</label><input id="gCount" type="number" inputmode="numeric" min="1" value="${g.count||1}">
     <label><input id="gPaid" type="checkbox" ${g.paid?'checked':''} style="width:auto;margin-right:8px">Har swishat</label>
-    <div class="btns">${id?'<button class="btn del" id="del">Ta bort</button>':''}<button class="btn sec" id="cancel">Avbryt</button><button class="btn pri" id="ok">Spara</button></div>
+    ${sheetButtons(id)}
   `, () => {
     if (!id) $('#gName').focus();
     $('#gStatus').onclick = e => {
@@ -357,23 +408,78 @@ function guestSheet(id){
     if (id) $('#del').onclick = () => { closeSheet(); deleteItem('guests', id); };
     $('#ok').onclick = () => {
       const name = $('#gName').value.trim(); if (!name) return $('#gName').focus();
-      const item = {id: id || uid(), name, status, count: Math.max(1, parseInt($('#gCount').value)||1), paid: $('#gPaid').checked};
       closeSheet();
-      saveItem('guests', item);
+      saveItem('guests', {id: id || uid(), name, status, paid: $('#gPaid').checked});
+    };
+  });
+}
+
+// Import: one name per line. A line like "Kommer" or "Kanske:" sets the answer for the lines below it.
+// "Namn; ja" on a single line also works.
+const STATUS_WORDS = {
+  ja:'ja', kommer:'ja', 'tackat ja':'ja', going:'ja',
+  kanske:'kanske', maybe:'kanske', intresserad:'kanske', intresserade:'kanske',
+  nej:'nej', 'kan inte':'nej', 'kan inte komma':'nej', 'tackat nej':'nej', "can't go":'nej',
+  ej:'ej', 'ej svarat':'ej', inbjuden:'ej', inbjudna:'ej', invited:'ej'
+};
+function parseImport(text){
+  let current = 'ej';
+  const out = new Map();
+  for (let line of text.split('\n')){
+    line = line.replace(/^[\s\-*•\d.)]+/, '').trim();
+    if (!line) continue;
+    const header = STATUS_WORDS[norm(line.replace(/[:()\d]/g,''))];
+    if (header){ current = header; continue; }
+    let name = line, st = current;
+    const m = line.match(/^(.*?)\s*[;\t]\s*(.+)$/);
+    if (m && STATUS_WORDS[norm(m[2])]){ name = m[1].trim(); st = STATUS_WORDS[norm(m[2])]; }
+    if (!name) continue;
+    const key = norm(name);
+    const prev = out.get(key);
+    if (prev && prev.status !== 'ej' && st === 'ej') continue; // don't downgrade within one import
+    out.set(key, {name, status: st});
+  }
+  return [...out.values()];
+}
+function importSheet(){
+  openSheet(`
+    <h3>Importera gäster</h3>
+    <p class="note" style="margin-top:0">Ett namn per rad. Skriv Kommer, Kanske, Kan inte eller Inbjudna på en egen rad, så får namnen under den det svaret. Finns gästen redan uppdateras bara svaret, swish rörs inte.</p>
+    <textarea id="impText" placeholder="Kommer&#10;Anna Andersson&#10;Erik Berg&#10;Kanske&#10;Sara Lind"></textarea>
+    <div class="btns"><button class="btn sec" id="cancel">Avbryt</button><button class="btn pri" id="ok">Importera</button></div>
+  `, () => {
+    $('#cancel').onclick = closeSheet;
+    $('#ok').onclick = async () => {
+      const rows = parseImport($('#impText').value);
+      if (!rows.length) return $('#impText').focus();
+      const byName = new Map(state.guests.map(g => [norm(g.name), g]));
+      const patch = {}; let added = 0, updated = 0;
+      for (const r of rows){
+        const ex = byName.get(norm(r.name));
+        if (ex){
+          if (ex.status !== r.status){ ex.status = r.status; patch[ex.id] = ex; updated++; }
+        } else {
+          const g = {id: uid(), name: r.name, status: r.status, paid: false};
+          state.guests.push(g); patch[g.id] = g; added++;
+        }
+      }
+      closeSheet(); render();
+      if (Object.keys(patch).length) await api('guests', 'PATCH', patch);
+      toast(online ? `${added} nya, ${updated} uppdaterade` : 'Kunde inte spara, kolla anslutningen');
     };
   });
 }
 
 function expenseSheet(id){
   const hosts = state.settings.hosts;
-  if (!hosts.length){ tab='settings'; render(); return; }
+  if (!hosts.length){ tab='settings'; render(); toast('Lägg till värdar först'); return; }
   const e = state.expenses.find(x => x.id === id) || {host:hosts[0], what:'', amount:''};
   openSheet(`
     <h3>${id ? 'Redigera utlägg' : 'Nytt utlägg'}</h3>
     <label for="eHost">Vem betalade?</label><select id="eHost">${hosts.map(h => `<option ${e.host===h?'selected':''}>${esc(h)}</option>`).join('')}</select>
     <label for="eWhat">Vad</label><input id="eWhat" value="${esc(e.what)}" placeholder="T.ex. dekorationer, bål, snacks">
     <label for="eAmt">Belopp (kr)</label><input id="eAmt" type="number" inputmode="decimal" value="${esc(e.amount)}">
-    <div class="btns">${id?'<button class="btn del" id="del">Ta bort</button>':''}<button class="btn sec" id="cancel">Avbryt</button><button class="btn pri" id="ok">Spara</button></div>
+    ${sheetButtons(id)}
   `, () => {
     $('#cancel').onclick = closeSheet;
     if (id) $('#del').onclick = () => { closeSheet(); deleteItem('expenses', id); };
@@ -381,32 +487,56 @@ function expenseSheet(id){
       const what = $('#eWhat').value.trim(), amount = parseFloat(String($('#eAmt').value).replace(',','.'));
       if (!what) return $('#eWhat').focus();
       if (!(amount > 0)) return $('#eAmt').focus();
-      const item = {id: id || uid(), host: $('#eHost').value, what, amount};
       closeSheet();
-      saveItem('expenses', item);
+      saveItem('expenses', {id: id || uid(), host: $('#eHost').value, what, amount});
     };
   });
 }
 
-function taskSheet(id){
-  const t = state.tasks.find(x => x.id === id) || {title:'', owner:'', due:'', done:false};
+function taskSheet(id, presetCat){
+  const cats = state.settings.categories;
+  const t = state.tasks.find(x => x.id === id) || {title:'', category: presetCat ?? (taskCat !== 'alla' ? taskCat : (cats[0] || '')), owner:'', due:'', note:'', done:false};
+  const catOpts = [...new Set([...cats, t.category].filter(Boolean))];
   openSheet(`
-    <h3>${id ? 'Redigera uppgift' : 'Ny uppgift'}</h3>
-    <label for="tTitle">Vad behöver göras?</label><input id="tTitle" value="${esc(t.title)}">
+    <h3>${id ? 'Redigera punkt' : 'Ny punkt'}</h3>
+    <label for="tTitle">Vad</label><input id="tTitle" value="${esc(t.title)}" placeholder="T.ex. Köpa pumpor">
+    <label for="tCat">Kategori</label>
+    <select id="tCat">${catOpts.map(c => `<option ${t.category===c?'selected':''}>${esc(c)}</option>`).join('')}<option value="" ${!t.category?'selected':''}>Övrigt</option><option value="__new">Ny kategori...</option></select>
+    <input id="tNewCat" placeholder="Namn på ny kategori" style="display:none;margin-top:8px">
     <label for="tOwner">Ansvarig</label><select id="tOwner"><option value="">Ingen än</option>${state.settings.hosts.map(h => `<option ${t.owner===h?'selected':''}>${esc(h)}</option>`).join('')}</select>
     <label for="tDue">Klart senast</label><input id="tDue" type="date" value="${esc(t.due)}">
-    <div class="btns">${id?'<button class="btn del" id="del">Ta bort</button>':''}<button class="btn sec" id="cancel">Avbryt</button><button class="btn pri" id="ok">Spara</button></div>
+    <label for="tNote">Anteckning</label><input id="tNote" value="${esc(t.note)}" placeholder="T.ex. antal, länk, idé">
+    ${sheetButtons(id)}
   `, () => {
     if (!id) $('#tTitle').focus();
+    $('#tCat').onchange = () => {
+      const isNew = $('#tCat').value === '__new';
+      $('#tNewCat').style.display = isNew ? 'block' : 'none';
+      if (isNew) $('#tNewCat').focus();
+    };
     $('#cancel').onclick = closeSheet;
     if (id) $('#del').onclick = () => { closeSheet(); deleteItem('tasks', id); };
-    $('#ok').onclick = () => {
+    $('#ok').onclick = async () => {
       const title = $('#tTitle').value.trim(); if (!title) return $('#tTitle').focus();
-      const item = {id: id || uid(), title, owner: $('#tOwner').value, due: $('#tDue').value, done: t.done};
+      let category = $('#tCat').value;
+      if (category === '__new'){
+        category = $('#tNewCat').value.trim();
+        if (!category) return $('#tNewCat').focus();
+      }
       closeSheet();
-      saveItem('tasks', item);
+      if (category && !state.settings.categories.includes(category))
+        await updateSettings(s => ({categories: s.categories.includes(category) ? s.categories : [...s.categories, category]}));
+      saveItem('tasks', {id: id || uid(), title, category, owner: $('#tOwner').value, due: $('#tDue').value, note: $('#tNote').value.trim(), done: t.done});
     };
   });
+}
+
+async function copyText(text){
+  try{ await navigator.clipboard.writeText(text); return true; }
+  catch(e){
+    const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
+    ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
+  }
 }
 
 // ---------- events ----------
@@ -416,11 +546,18 @@ document.querySelector('nav').onclick = e => {
 };
 $('#fab').onclick = () => ({guests:guestSheet, money:expenseSheet, tasks:taskSheet})[tab]?.();
 
-$('#view').onclick = e => {
-  const d = e.target.closest('[data-filter],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],#saveSettings,#addHost');
+$('#view').addEventListener('input', e => {
+  if (e.target.id === 'search'){ query = e.target.value; $('#glist').innerHTML = guestListHtml(); }
+});
+
+$('#view').onclick = async e => {
+  const d = e.target.closest('[data-show],[data-swf],[data-cat],[data-addincat],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],[data-delcat],#saveSettings,#addHost,#addCat,#import,#copyUnpaid');
   if (!d) return;
   const ds = d.dataset;
-  if (ds.filter){ guestFilter = ds.filter; render(); }
+  if (ds.show){ shown[ds.show] = !shown[ds.show]; render(); }
+  else if (ds.swf){ swishFilter = ds.swf; render(); }
+  else if (ds.cat){ taskCat = ds.cat; render(); }
+  else if ('addincat' in ds) taskSheet(null, ds.addincat);
   else if (ds.cycle){ const g = state.guests.find(x => x.id===ds.cycle); patchItem('guests', ds.cycle, {status: STATUS[(STATUS.findIndex(s=>s.k===g.status)+1)%STATUS.length].k}); }
   else if (ds.paid){ const g = state.guests.find(x => x.id===ds.paid); patchItem('guests', ds.paid, {paid: !g.paid}); }
   else if (ds.editguest) guestSheet(ds.editguest);
@@ -430,28 +567,43 @@ $('#view').onclick = e => {
   else if (ds.delhost){
     if (confirm(`Ta bort ${ds.delhost} som värd?`)) updateSettings(s => ({hosts: s.hosts.filter(h => h !== ds.delhost), receiver: s.receiver===ds.delhost ? '' : s.receiver}));
   }
+  else if (ds.delcat){
+    if (confirm(`Ta bort kategorin ${ds.delcat}?`)){
+      if (taskCat === ds.delcat) taskCat = 'alla';
+      await updateSettings(s => ({categories: s.categories.filter(c => c !== ds.delcat)}));
+      const moved = state.tasks.filter(t => t.category === ds.delcat);
+      for (const t of moved) patchItem('tasks', t.id, {category: ''});
+    }
+  }
   else if (d.id === 'addHost'){
     const name = $('#newHost').value.trim(); if (!name) return $('#newHost').focus();
     updateSettings(s => ({hosts: s.hosts.includes(name) ? s.hosts : [...s.hosts, name]}));
+  }
+  else if (d.id === 'addCat'){
+    const name = $('#newCat').value.trim(); if (!name) return $('#newCat').focus();
+    updateSettings(s => ({categories: s.categories.includes(name) ? s.categories : [...s.categories, name]}));
   }
   else if (d.id === 'saveSettings'){
     const name = $('#setName').value.trim() || 'Halloweenfesten';
     const price = parseFloat(String($('#setPrice').value).replace(',','.')) || 0;
     const receiver = $('#setRecv').value;
-    updateSettings(() => ({name, price, receiver}));
+    await updateSettings(() => ({name, price, receiver}));
+    toast('Sparat');
+  }
+  else if (d.id === 'import') importSheet();
+  else if (d.id === 'copyUnpaid'){
+    const names = guestNumbers().unpaid.map(g => g.name).sort((a,b) => a.localeCompare(b,'sv'));
+    toast(await copyText(names.join(', ')) ? `${names.length} namn kopierade` : 'Kunde inte kopiera');
   }
 };
 
 // ---------- start ----------
 (async () => {
-  if (DB_URL.includes('DITT-PROJEKT')){
-    $('#view').innerHTML = '<div class="empty">Databasen är inte kopplad än. Klistra in Firebase-URL:en i DB_URL högst upp i skriptet.</div>';
-    $('#subtext').textContent = 'Ej kopplad'; online = false; updateSync(); return;
-  }
   await refresh();
   render();
   if (!state.settings.hosts.length){ tab = 'settings'; render(); }
-  setInterval(() => { if (!sheetOpen && !document.hidden && document.activeElement?.tagName !== 'INPUT') refresh(); }, 5000);
+  const busy = () => sheetOpen || document.hidden || ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement?.tagName);
+  setInterval(() => { if (!busy()) refresh(); }, 5000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 })();
 </script>
