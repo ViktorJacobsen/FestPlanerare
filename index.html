@@ -315,7 +315,8 @@ function render(){
   const s = state.settings;
   $('#title').textContent = s.name || 'Halloweenfesten';
   const n = guestNumbers();
-  $('#subtext').textContent = `${n.ja} kommer, ${n.kanske} kanske. Uppdateras automatiskt.`;
+  const hostsN = s.hosts.length;
+  $('#subtext').textContent = `${n.ja + hostsN} kommer${hostsN ? ` (${n.ja} gäster + ${hostsN} värdar)` : ''}, ${n.kanske} kanske.`;
   $('#fab').style.display = tab === 'settings' ? 'none' : 'block';
   document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === tab));
   $('#view').innerHTML = ({guests:viewGuests, money:viewMoney, tasks:viewTasks, settings:viewSettings})[tab]();
@@ -350,6 +351,7 @@ function viewGuests(){
   const n = guestNumbers();
   return `
     <div class="stats">
+      ${state.settings.hosts.length ? `<div class="stat" style="border-color:var(--pumpkin)"><b>${n.ja + state.settings.hosts.length}</b><span>Totalt inkl. värdar</span></div>` : ''}
       <div class="stat"><b>${n.ja}</b><span>Ja</span></div>
       <div class="stat"><b>${n.kanske}</b><span>Kanske</span></div>
       <div class="stat"><b>${n.nej}</b><span>Nej</span></div>
