@@ -57,6 +57,9 @@
   .check{width:28px;height:28px;border-radius:8px;border:2px solid var(--line);background:transparent;color:var(--night);font-size:16px;flex:0 0 auto}
   .check.on{background:var(--moss);border-color:var(--moss)}
   .done .name{text-decoration:line-through;color:var(--dim)}
+  .quick{display:block;background:transparent;border:none;border-bottom:1px dashed var(--line);border-radius:0;padding:14px 4px 14px 42px;color:var(--bone)}
+  .quick::placeholder{color:var(--dim)}
+  .quick:focus{outline:none;border-bottom-color:var(--pumpkin)}
   .edit{background:none;border:none;color:var(--dim);font-size:20px;padding:6px}
   h2{font-size:17px;margin:22px 0 8px;font-weight:700}
   h2 .cnt{font-weight:400;color:var(--dim);font-size:14px}
@@ -425,7 +428,8 @@ function viewTasks(){
         <div class="meta">${[t.owner ? esc(t.owner) : '', fmt(t.due), t.est ? `ca ${kr(Number(t.est))}` : '', t.note ? esc(t.note) : ''].filter(Boolean).join(', ') || 'Ingen ansvarig'}</div>
       </div>
       <button class="edit" data-edittask="${t.id}" aria-label="Redigera">✎</button>
-    </div>`).join('') : `<button class="btn sec wide" data-addincat="${esc(cat)}">Lägg till i ${esc(cat)}</button>`;
+    </div>`).join('') : '';
+    html += `<input class="quick" data-quick="${esc(cat)}" placeholder="+ Ny punkt i ${esc(cat || 'Övrigt')}" enterkeyhint="next" autocomplete="off" autocapitalize="sentences">`;
   }
   return html;
 }
@@ -622,6 +626,42 @@ async function copyText(text){
   }
 }
 
+// ---------- quick add in Planering (like typing in a notes app) ----------
+function quickAdd(cat, text){
+  const lines = String(text).split(/\r?\n/).map(l => l.replace(/^[\s\-*•]+/, '').trim()).filter(Boolean);
+  const owner = state.settings.hosts.includes(taskOwner) ? taskOwner : '';
+  for (const title of lines)
+    saveItem('tasks', {id: uid(), title, category: cat, owner, due:'', note:'', est:0, done:false});
+  return lines.length;
+}
+const quickInput = cat => [...document.querySelectorAll('.quick')].find(el => el.dataset.quick === cat);
+$('#view').addEventListener('keydown', e => {
+  const el = e.target;
+  if (!el.classList?.contains('quick') || e.key !== 'Enter') return;
+  e.preventDefault();
+  const text = el.value.trim(), cat = el.dataset.quick;
+  if (!text) { el.blur(); return; }
+  el.value = '';
+  quickAdd(cat, text);
+  quickInput(cat)?.focus(); // stay in the field so the next idea can be typed right away
+});
+$('#view').addEventListener('paste', e => {
+  const el = e.target;
+  if (!el.classList?.contains('quick')) return;
+  const text = (e.clipboardData || window.clipboardData)?.getData('text') || '';
+  if (!/\n/.test(text.trim())) return; // single line: let it paste normally
+  e.preventDefault();
+  const cat = el.dataset.quick, n = quickAdd(cat, el.value + text);
+  quickInput(cat)?.focus();
+  toast(`${n} punkter tillagda`);
+});
+$('#view').addEventListener('focusout', e => {
+  const el = e.target;
+  if (!el.classList?.contains('quick') || !el.value.trim()) return;
+  const text = el.value; el.value = '';
+  quickAdd(el.dataset.quick, text); // don't lose what was typed if the field is left
+});
+
 // ---------- events ----------
 document.querySelector('nav').onclick = e => {
   const b = e.target.closest('button'); if (!b) return;
@@ -645,14 +685,13 @@ $('#view').addEventListener('change', e => {
 });
 
 $('#view').onclick = async e => {
-  const d = e.target.closest('[data-show],[data-swf],[data-cat],[data-owner],[data-addincat],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],[data-delcat],#saveSettings,#addHost,#addCat,#import,#copyUnpaid,#usePrice,#fillSuggested');
+  const d = e.target.closest('[data-show],[data-swf],[data-cat],[data-owner],[data-cycle],[data-paid],[data-editguest],[data-editexp],[data-edittask],[data-done],[data-delhost],[data-delcat],#saveSettings,#addHost,#addCat,#import,#copyUnpaid,#usePrice,#fillSuggested');
   if (!d) return;
   const ds = d.dataset;
   if (ds.show){ shown[ds.show] = !shown[ds.show]; render(); }
   else if (ds.swf){ swishFilter = ds.swf; render(); }
   else if (ds.cat){ taskCat = ds.cat; render(); }
   else if (ds.owner){ taskOwner = ds.owner; render(); }
-  else if ('addincat' in ds) taskSheet(null, ds.addincat);
   else if (ds.cycle){ const g = state.guests.find(x => x.id===ds.cycle); patchItem('guests', ds.cycle, {status: STATUS[(STATUS.findIndex(s=>s.k===g.status)+1)%STATUS.length].k}); }
   else if (ds.paid){ const g = state.guests.find(x => x.id===ds.paid); patchItem('guests', ds.paid, {paid: !g.paid}); }
   else if (ds.editguest) guestSheet(ds.editguest);
