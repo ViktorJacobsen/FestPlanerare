@@ -427,7 +427,7 @@ function viewTasks(){
       <button class="check ${t.done?'on':''}" data-done="${t.id}" aria-label="Klar">${t.done?'✓':''}</button>
       <div class="main" data-edittask="${t.id}">
         <div class="name">${esc(t.title)}</div>
-        <div class="meta">${[t.owner ? esc(t.owner) : '', fmt(t.due), t.est ? `ca ${kr(Number(t.est))}` : '', t.note ? esc(t.note) : ''].filter(Boolean).join(', ') || 'Ingen ansvarig'}</div>
+        <div class="meta">${[t.owner ? esc(t.owner) : '', fmt(t.due), (() => { const x = state.expenses.find(e => e.taskId === t.id); return x ? `utlägg ${kr(Number(x.amount)||0)}` : (t.est ? `ca ${kr(Number(t.est))}` : ''); })(), t.note ? esc(t.note) : ''].filter(Boolean).join(', ') || 'Ingen ansvarig'}</div>
       </div>
       <button class="edit" data-edittask="${t.id}" aria-label="Redigera">✎</button>
     </div>`).join('') : '';
@@ -576,7 +576,7 @@ function expenseSheet(id){
       if (!what) return $('#eWhat').focus();
       if (!(amount > 0)) return $('#eAmt').focus();
       closeSheet();
-      saveItem('expenses', {id: id || uid(), host: $('#eHost').value, what, amount});
+      saveItem('expenses', {...(e.taskId ? {taskId: e.taskId} : {}), id: id || uid(), host: $('#eHost').value, what, amount});
     };
   });
 }
@@ -604,7 +604,7 @@ function taskSheet(id, presetCat){
       if (isNew) $('#tNewCat').focus();
     };
     $('#cancel').onclick = closeSheet;
-    if (id) $('#del').onclick = () => { closeSheet(); deleteItem('tasks', id); };
+    if (id) $('#del').onclick = () => { closeSheet(); const x = state.expenses.find(e => e.taskId === id); if (x) deleteItem('expenses', x.id); deleteItem('tasks', id); };
     $('#ok').onclick = async () => {
       const title = $('#tTitle').value.trim(); if (!title) return $('#tTitle').focus();
       let category = $('#tCat').value;
@@ -626,6 +626,33 @@ async function copyText(text){
     const ta = document.createElement('textarea'); ta.value = text; document.body.appendChild(ta);
     ta.select(); const ok = document.execCommand('copy'); ta.remove(); return ok;
   }
+}
+
+// When a task with an estimated cost is checked off, ask what it actually cost
+// and register it as an expense for the responsible host.
+function costSheet(t){
+  const hosts = state.settings.hosts;
+  if (!hosts.length) return;
+  openSheet(`
+    <h3>Lägga till som utlägg?</h3>
+    <p class="note" style="margin-top:0">${esc(t.title)} är klar. Fyll i vad det faktiskt kostade så räknas det in i Utlägg.</p>
+    <label for="cHost">Vem betalade?</label>
+    <select id="cHost"><option value="">Välj värd</option>${hosts.map(h => `<option ${t.owner===h?'selected':''}>${esc(h)}</option>`).join('')}</select>
+    <label for="cAmt">Belopp (kr)</label>
+    <input id="cAmt" type="number" inputmode="decimal" value="${Number(t.est)||''}">
+    <div class="btns"><button class="btn sec" id="cancel">Hoppa över</button><button class="btn pri" id="ok">Lägg till</button></div>
+  `, () => {
+    $('#cancel').onclick = closeSheet;
+    $('#ok').onclick = () => {
+      const host = $('#cHost').value, amount = parseFloat(String($('#cAmt').value).replace(',','.'));
+      if (!host) return $('#cHost').focus();
+      if (!(amount > 0)) return $('#cAmt').focus();
+      closeSheet();
+      saveItem('expenses', {id: 't_' + t.id, taskId: t.id, host, what: t.title, amount});
+      if (!t.owner) patchItem('tasks', t.id, {owner: host});
+      toast(`${kr(amount)} lagt som utlägg för ${host}`);
+    };
+  });
 }
 
 // ---------- quick add in Planering (like typing in a notes app) ----------
@@ -699,7 +726,14 @@ $('#view').onclick = async e => {
   else if (ds.editguest) guestSheet(ds.editguest);
   else if (ds.editexp) expenseSheet(ds.editexp);
   else if (ds.edittask) taskSheet(ds.edittask);
-  else if (ds.done){ const t = state.tasks.find(x => x.id===ds.done); patchItem('tasks', ds.done, {done: !t.done}); }
+  else if (ds.done){
+    const t = state.tasks.find(x => x.id===ds.done);
+    const nowDone = !t.done;
+    patchItem('tasks', t.id, {done: nowDone});
+    const linked = state.expenses.find(x => x.taskId === t.id);
+    if (nowDone && Number(t.est) > 0 && !linked) costSheet(t);
+    else if (!nowDone && linked){ deleteItem('expenses', linked.id); toast('Utlägget togs bort'); }
+  }
   else if (ds.delhost){
     if (confirm(`Ta bort ${ds.delhost} som värd?`)) updateSettings(s => ({hosts: s.hosts.filter(h => h !== ds.delhost), receiver: s.receiver===ds.delhost ? '' : s.receiver}));
   }
